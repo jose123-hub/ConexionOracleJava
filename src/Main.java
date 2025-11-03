@@ -3,29 +3,27 @@ import java.sql.*;
 public class Main {
     public static void main(String[] args) {
         try {
-            // Cargar el driver de Oracle
+
             Class.forName("oracle.jdbc.driver.OracleDriver");
 
-            // Conexión a la base de datos
+
             Connection conn = DriverManager.getConnection(
                     "jdbc:oracle:thin:@localhost:1521:XE",
-                    "SYSTEM",          // Usuario
-                    "infermihai"       // Contraseña
+                    "SYSTEM",
+                    "infermihai"
             );
 
             System.out.println("✅ Conexión exitosa a Oracle Database 11g\n");
 
-            // Mostrar usuario conectado
-            Statement stUser = conn.createStatement();
-            ResultSet rsUser = stUser.executeQuery("SELECT USER FROM dual");
-            if (rsUser.next()) {
-                System.out.println("👤 Usuario conectado desde Java: " + rsUser.getString(1) + "\n");
-            }
-            rsUser.close();
-            stUser.close();
-
-            // Consulta SQL
-            String sql = "SELECT * FROM SYSTEM.CLIENTE";
+            String sql = """
+                SELECT c.nombre AS cliente,
+                       r.nombre_rutina AS rutina,
+                       cr.fecha_inicio,
+                       cr.fecha_final
+                FROM SYSTEM.CLIENTE c
+                JOIN SYSTEM.CLIENTE_RUTINA cr ON c.cod_cliente = cr.cod_cliente
+                JOIN SYSTEM.RUTINA r ON r.cod_rutina = cr.cod_rutina
+            """;
 
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery(sql);
@@ -36,17 +34,15 @@ public class Main {
             while (rs.next()) {
                 hayDatos = true;
                 System.out.println(
-                        "CodCliente: " + rs.getInt("cod_cliente") +
-                                " | Nombre: " + rs.getString("nombre") +
-                                " | Edad: " + rs.getInt("edad") +
-                                " | Peso: " + rs.getDouble("peso") +
-                                " | Sexo: " + rs.getString("sexo") +
-                                " | Altura: " + rs.getDouble("altura")
+                        "Cliente: " + rs.getString("cliente") +
+                                " | Rutina: " + rs.getString("rutina") +
+                                " | Inicio: " + rs.getDate("fecha_inicio") +
+                                " | Fin: " + rs.getDate("fecha_final")
                 );
             }
 
             if (!hayDatos) {
-                System.out.println("⚠️ No se encontraron registros en SYSTEM.CLIENTE.");
+                System.out.println("⚠️ No se encontraron registros.");
             }
 
             rs.close();
