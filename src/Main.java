@@ -1,57 +1,65 @@
+import oracle.jdbc.internal.OracleTypes;
 import java.sql.*;
 
 public class Main {
     public static void main(String[] args) {
+
+        Connection conn = null;
+        CallableStatement cs = null;
+        ResultSet rsVista = null;
+        ResultSet rsAlumno = null;
+
         try {
-
             Class.forName("oracle.jdbc.driver.OracleDriver");
-
-
-            Connection conn = DriverManager.getConnection(
+            conn = DriverManager.getConnection(
                     "jdbc:oracle:thin:@localhost:1521:XE",
                     "SYSTEM",
-                    "infermihai"
+                    "infermihai123"
             );
 
-            System.out.println("✅ Conexión exitosa a Oracle Database 11g\n");
+            System.out.println("RESULTADOS DE LA VISTA: VW_NOTAS_ALUMNOS");
 
-            String sql = """
-                SELECT c.nombre AS cliente,
-                       r.nombre_rutina AS rutina,
-                       cr.fecha_inicio,
-                       cr.fecha_final
-                FROM SYSTEM.CLIENTE c
-                JOIN SYSTEM.CLIENTE_RUTINA cr ON c.cod_cliente = cr.cod_cliente
-                JOIN SYSTEM.RUTINA r ON r.cod_rutina = cr.cod_rutina
-            """;
+            String sqlVista = "SELECT * FROM VW_NOTAS_ALUMNOS";
 
             Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql);
+            rsVista = stmt.executeQuery(sqlVista);
 
-            System.out.println("--- Clientes con sus rutinas ---");
-
-            boolean hayDatos = false;
-            while (rs.next()) {
-                hayDatos = true;
+            while (rsVista.next()) {
                 System.out.println(
-                        "Cliente: " + rs.getString("cliente") +
-                                " | Rutina: " + rs.getString("rutina") +
-                                " | Inicio: " + rs.getDate("fecha_inicio") +
-                                " | Fin: " + rs.getDate("fecha_final")
+                        "Alumno: " + rsVista.getString("alumno") +
+                                " | Curso: " + rsVista.getString("curso") +
+                                " | Nota: " + rsVista.getDouble("nota")
                 );
             }
-
-            if (!hayDatos) {
-                System.out.println("⚠️ No se encontraron registros.");
-            }
-
-            rs.close();
+            rsVista.close();
             stmt.close();
-            conn.close();
 
+            System.out.println("\n------------------------------------------\n");
+
+            System.out.println("RESULTADO DEL PROCEDIMIENTO: SP_LISTAR_ALUMNOS");
+
+            cs = conn.prepareCall("{ call sp_listar_alumnos(?) }");
+            cs.registerOutParameter(1, OracleTypes.CURSOR);
+            cs.execute();
+
+            rsAlumno = (ResultSet) cs.getObject(1);
+
+            while (rsAlumno.next()) {
+                System.out.println(
+                        "ID: " + rsAlumno.getInt("id_alumno") +
+                                " | Nombre: " + rsAlumno.getString("nombres") +
+                                " | Apellido: " + rsAlumno.getString("apellidos") +
+                                " | Grado: " + rsAlumno.getString("grado")
+                );
+            }
+            rsAlumno.close();
+            cs.close();
         } catch (Exception e) {
             System.out.println("❌ Error: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            try { if(conn != null) conn.close(); } catch (Exception ex) {}
         }
+
     }
 }
